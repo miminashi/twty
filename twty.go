@@ -108,6 +108,7 @@ type User struct {
 	FollowersCount  int    `json:"followers_count"`
 	FriendsCount    int    `json:"friends_count"`
 	ProfileImageURL string `json:"profile_image_url"`
+	Description     string `json:"description"`
 }
 
 // SearchMetadata hold information about search metadata
@@ -352,13 +353,47 @@ func showUser(user User, asjson bool, verbose bool) {
 		os.Stdout.Sync()
 	} else if verbose {
 		fmt.Printf("id: %d\n", user.Id)
-	} else {
-		fmt.Printf("id: %d\n", user.Id)
 		fmt.Printf("name: %s\n", user.Name)
 		fmt.Printf("screen_name: %s\n", user.ScreenName)
 		fmt.Printf("followers_count: %d\n", user.FollowersCount)
 		fmt.Printf("friends_count: %d\n", user.FriendsCount)
 		fmt.Printf("profile_image_url: %s\n", user.ProfileImageURL)
+		//jsonBytes, err := json.Marshal(user.Description)
+		//if err != nil {
+		//    log.Fatal("JSON Marshal error:", err)
+		//}
+		//fmt.Printf("description: %s\n", string(jsonBytes))
+		fmt.Println("description: " + html.UnescapeString(replacer.Replace(user.Description)))
+	} else {
+		id := user.Id
+		name := user.Name
+		screen_name := user.ScreenName
+		followers_count := user.FollowersCount
+		friends_count := user.FriendsCount
+		description := html.UnescapeString(replacer.Replace(user.Description))
+		//fmt.Printf("%d\t%s\t%s\t%d\t%d\t%s\n", id, name, screen_name, followers_count, friends_count, description)
+		fmt.Println(strconv.Itoa(id) + "\t" + name + "\t" + screen_name + "\t" + strconv.Itoa(followers_count) + "\t" + strconv.Itoa(friends_count) + "\t" + description)
+	}
+}
+
+func showUsers(users []User, asjson bool, verbose bool) {
+	if asjson {
+		for _, user := range users {
+			json.NewEncoder(os.Stdout).Encode(user)
+			os.Stdout.Sync()
+		}
+	} else if verbose {
+		for i, user := range users {
+			if i != 0 {
+				fmt.Printf("\n")
+			}
+			showUser(user, asjson, verbose)
+		}
+	} else {
+		fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n", "id", "name", "screen_name", "followers_count", "friends_count", "description")
+		for _, user := range users {
+			showUser(user, asjson, verbose)
+		}
 	}
 }
 
@@ -493,6 +528,7 @@ func main() {
 	var media files
 	var verbose bool
 	var show_user string
+	var search_user string
 
 	flag.StringVar(&profile, "a", "", "account")
 	flag.BoolVar(&reply, "r", false, "show replies")
@@ -506,6 +542,7 @@ func main() {
 	flag.BoolVar(&verbose, "v", false, "detail display")
 	flag.BoolVar(&debug, "debug", false, "debug json")
 	flag.StringVar(&show_user, "show_user", "", "show user profile")
+	flag.StringVar(&search_user, "search_user", "", "search users")
 
 	var fromfile string
 	var count string
@@ -540,6 +577,7 @@ func main() {
   -since_id NUMBER: show tweets that have ids greater than NUMBER.
   -max_id NUMBER: show tweets that have ids lower than NUMBER.
   -show_user USER: show user profile
+  -search_user SEARCHWORD: search users
 `)
 	}
 	flag.Parse()
@@ -667,6 +705,15 @@ func main() {
 			log.Fatal("cannot get user:", err)
 		}
 		showUser(user, asjson, verbose)
+	} else if search_user != "" {
+		var users []User
+		query := search_user
+		opt := map[string]string{"q": query}
+		err := rawCall(token, http.MethodGet, "https://api.twitter.com/1.1/users/search.json", opt, &users)
+		if err != nil {
+			log.Fatal("cannot search users:", err)
+		}
+		showUsers(users, asjson, verbose)
 	} else if flag.NArg() == 0 && len(media) == 0 {
 		if inreply != "" {
 			var tweet Tweet

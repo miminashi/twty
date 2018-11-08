@@ -539,6 +539,7 @@ func main() {
   -until DATE: show tweets created before the DATE (ex. 2017-05-31)
   -since_id NUMBER: show tweets that have ids greater than NUMBER.
   -max_id NUMBER: show tweets that have ids lower than NUMBER.
+  -show_user USER: show user profile
 `)
 	}
 	flag.Parse()

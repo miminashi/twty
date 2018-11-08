@@ -101,6 +101,15 @@ type Tweet struct {
 	} `json:"entities"`
 }
 
+type User struct {
+	Id              int    `json:"id"`
+	Name            string `json:"name"`
+	ScreenName      string `json:"screen_name"`
+	FollowersCount  int    `json:"followers_count"`
+	FriendsCount    int    `json:"friends_count"`
+	ProfileImageURL string `json:"profile_image_url"`
+}
+
 // SearchMetadata hold information about search metadata
 type SearchMetadata struct {
 	CompletedIn float64 `json:"completed_in"`
@@ -337,6 +346,22 @@ func showTweets(tweets []Tweet, asjson bool, verbose bool) {
 	}
 }
 
+func showUser(user User, asjson bool, verbose bool) {
+	if asjson {
+		json.NewEncoder(os.Stdout).Encode(user)
+		os.Stdout.Sync()
+	} else if verbose {
+		fmt.Printf("id: %d\n", user.Id)
+	} else {
+		fmt.Printf("id: %d\n", user.Id)
+		fmt.Printf("name: %s\n", user.Name)
+		fmt.Printf("screen_name: %s\n", user.ScreenName)
+		fmt.Printf("followers_count: %d\n", user.FollowersCount)
+		fmt.Printf("friends_count: %d\n", user.FriendsCount)
+		fmt.Printf("profile_image_url: %s\n", user.ProfileImageURL)
+	}
+}
+
 func getConfig(profile string) (string, map[string]string, error) {
 	dir := os.Getenv("HOME")
 	if dir == "" && runtime.GOOS == "windows" {
@@ -467,6 +492,7 @@ func main() {
 	var inreply string
 	var media files
 	var verbose bool
+	var show_user string
 
 	flag.StringVar(&profile, "a", "", "account")
 	flag.BoolVar(&reply, "r", false, "show replies")
@@ -479,6 +505,7 @@ func main() {
 	flag.Var(&media, "m", "upload media")
 	flag.BoolVar(&verbose, "v", false, "detail display")
 	flag.BoolVar(&debug, "debug", false, "debug json")
+	flag.StringVar(&show_user, "show_user", "", "show user profile")
 
 	var fromfile string
 	var count string
@@ -630,6 +657,15 @@ func main() {
 			log.Fatal("cannot post tweet:", err)
 		}
 		fmt.Println("tweeted:", tweet.Identifier)
+	} else if show_user != "" {
+		var user User
+		screen_name := show_user
+		opt := map[string]string{"screen_name": screen_name}
+		err := rawCall(token, http.MethodGet, "https://api.twitter.com/1.1/users/show.json", opt, &user)
+		if err != nil {
+			log.Fatal("cannot get user:", err)
+		}
+		showUser(user, asjson, verbose)
 	} else if flag.NArg() == 0 && len(media) == 0 {
 		if inreply != "" {
 			var tweet Tweet
